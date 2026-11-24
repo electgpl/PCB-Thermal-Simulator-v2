@@ -204,27 +204,46 @@ def _chain_loops(segments: List[np.ndarray], tol=0.02) -> List[np.ndarray]:
 
 
 def _read_outline(root, warnings) -> List[np.ndarray]:
+    """Contorno de la placa. Edge.Cuts puede estar dibujado suelto en el PCB
+    (gr_*) o dentro de un footprint (fp_*), p. ej. un marco mecánico."""
     loops, open_segs = [], []
-    for g in root[1:]:
-        if not isinstance(g, list) or not g[0].startswith('gr_'):
-            continue
-        lay = kid(g, 'layer')
-        if not lay or lay[1] != 'Edge.Cuts':
-            continue
-        if g[0] == 'gr_rect':
-            (x0, y0), (x1, y1) = _xy(kid(g, 'start')), _xy(kid(g, 'end'))
-            loops.append(np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]))
-        elif g[0] == 'gr_circle':
-            c, e = _xy(kid(g, 'center')), _xy(kid(g, 'end'))
-            loops.append(circle_poly(c[0], c[1], math.hypot(e[0] - c[0], e[1] - c[1]), 64))
-        elif g[0] == 'gr_poly':
-            loops.append(_pts(g))
-        elif g[0] == 'gr_line':
-            open_segs.append(np.array([_xy(kid(g, 'start')), _xy(kid(g, 'end'))]))
-        elif g[0] == 'gr_arc':
-            open_segs.append(arc_points(_xy(kid(g, 'start')), _xy(kid(g, 'mid')),
-                                        _xy(kid(g, 'end')), 5.0))
-    loops += _chain_loops(open_segs)
+
+    def collect(items, prefix, tf):
+        for g in items:
+            if not isinstance(g, list) or not str(g[0]).startswith(prefix):
+                continue
+            lay = kid(g, 'layer')
+            if not lay or lay[1] != 'Edge.Cuts':
+                continue
+            kind = g[0][len(prefix):]
+            if kind == 'rect':
+                (x0, y0), (x1, y1) = _xy(kid(g, 'start')), _xy(kid(g, 'end'))
+                loops.append(tf(np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])))
+            elif kind == 'circle':
+                c, e = _xy(kid(g, 'center')), _xy(kid(g, 'end'))
+                loops.append(tf(circle_poly(c[0], c[1],
+                                            math.hypot(e[0] - c[0], e[1] - c[1]), 64)))
+            elif kind == 'poly':
+                loops.append(tf(_pts(g)))
+            elif kind == 'line':
+                open_segs.append(tf(np.array([_xy(kid(g, 'start')), _xy(kid(g, 'end'))])))
+            elif kind == 'arc' and kid(g, 'mid'):
+                open_segs.append(tf(arc_points(_xy(kid(g, 'start')), _xy(kid(g, 'mid')),
+                                               _xy(kid(g, 'end')), 5.0)))
+
+    collect(root[1:], 'gr_', lambda p: p)
+    for fp in kids(root, 'footprint') + kids(root, 'module'):
+        at = kid(fp, 'at')
+        fx, fy = _f(at[1]), _f(at[2])
+        frot = _f(at[3]) if len(at) > 3 else 0.0
+        collect(fp[1:], 'fp_', lambda p, fx=fx, fy=fy, frot=frot: rotate(p, frot) + (fx, fy))
+
+    n_closed = len(loops)
+    chained = _chain_loops(open_segs)
+    loops += chained
+    if open_segs and not chained and not n_closed:
+        raise ValueError("Edge.Cuts tiene líneas pero no forman un contorno cerrado "
+                         "(revisá que los extremos coincidan).")
     if not loops:
         raise ValueError("No se encontró un contorno cerrado en Edge.Cuts.")
     return loops

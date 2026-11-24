@@ -18,8 +18,8 @@ Dos formas de usarlo:
 #  CONFIGURACIÓN  (se usa cuando se ejecuta sin argumentos, p. ej. desde Thonny)
 #  Las rutas relativas se toman desde la carpeta donde está este archivo.
 # ══════════════════════════════════════════════════════════════════════════
-PCB_FILE     = "examples/EMI_SS_Supply_Electgpl.kicad_pcb"
-CSV_FILE     = "examples/EMI_SS_Supply_Electgpl.csv"   # None = solo campos de KiCad
+PCB_FILE     = "examples/ESP32_LoRa_Zero.kicad_pcb"
+CSV_FILE     = "examples/ESP32_LoRa_Zero.csv"   # None = solo campos de KiCad
 OUT_DIR      = "thermal_out"        # carpeta de resultados
 MAKE_TEMPLATE = False               # True = solo genera CSV_FILE con todos los
                                     #        componentes para completar, y termina
@@ -234,7 +234,10 @@ def main(argv=None):
             continue
         others = sorted(((k, v) for k, v in r['contrib'].items() if k != r['ref']),
                         key=lambda kv: -kv[1])
-        txt = " + ".join(f"{v:.1f} de {k}" for k, v in others if v >= 0.05)
+        top3, rest = others[:3], sum(v for _, v in others[3:])
+        txt = " + ".join(f"{v:.1f} de {k}" for k, v in top3 if v >= 0.05)
+        if rest >= 0.05:
+            txt += f" + {rest:.1f} del resto"
         print(f"  {r['ref']:<5} pads a +{r['T_pads'] - cfg.T_amb_C:.1f} °C = "
               f"{r['rise_own']:.1f} propio" + (f" + {txt}" if txt else ""))
     print(f"\n>>> {phrase}")

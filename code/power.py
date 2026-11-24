@@ -14,7 +14,7 @@ Modelo de componente:
   disipador, lo que sale por arriba del encapsulado es despreciable; es además
   la hipótesis conservadora). Reparto:
     - Thermal_Pads indicado (ej. "9" o "2 4")  → solo esos pads
-    - si no, y el footprint tiene pad expuesto → solo el pad expuesto
+    - si no, y el footprint tiene pad expuesto o aleta (TO-252, SOT-223) → solo ese pad
     - si no                                    → todos los pads, por área
   T_j = T_pads(simulada) + P · θ_JB
 
@@ -73,6 +73,8 @@ def _num(s) -> Optional[float]:
 def read_csv(path: str) -> Dict[str, dict]:
     with open(path, encoding='utf-8-sig') as fh:
         text = fh.read()
+    # Las líneas que empiezan con # son comentarios
+    text = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith('#'))
     first = text.splitlines()[0] if text.strip() else ''
     delim = ';' if first.count(';') > first.count(',') else ','
     rows = {}
@@ -96,18 +98,40 @@ def _from_props(c: Component) -> dict:
     return rec
 
 
-def _exposed_pad(c: Component) -> Optional[Pad]:
-    """Pad expuesto: el más grande, bien centrado, en un encapsulado de ≥5 pads."""
-    pads = [p for p in c.pads if c.layer in p.layers]
-    if len(pads) < 5:
+def _thermal_group(c: Component):
+    """Detecta por dónde baja el calor cuando el footprint lo deja claro.
+    Los pads se agrupan por número (un pad expuesto o una aleta suelen estar
+    dibujados como varios pads con el mismo número). Devuelve (pads, motivo) o None.
+
+      - Pad expuesto: grupo grande y centrado en un encapsulado de ≥5 pines.
+      - Aleta (TO-252, SOT-223, ...): un grupo con ≥60 % del cobre del footprint.
+    """
+    mine = [p for p in c.pads if c.layer in p.layers]
+    groups = {}
+    for p in mine:
+        groups.setdefault(p.number, []).append(p)
+    if len(groups) < 3:
         return None
-    big = max(pads, key=lambda p: p.area_mm2)
-    others = [p.area_mm2 for p in pads if p is not big]
-    ctr = np.mean([p.center for p in pads if p is not big], axis=0)
-    span = np.ptp(np.vstack([p.center for p in pads]), axis=0).max()
-    if big.area_mm2 > 2.5 * np.median(others) and \
-            np.hypot(*(big.center - ctr)) < 0.15 * max(span, 1e-6):
-        return big
+
+    def g_area(ps):         # sin contar dos veces pads superpuestos (sub-pads de pasta)
+        big = max(ps, key=lambda p: p.area_mm2)
+        v = np.vstack(big.polys)
+        lo, hi = v.min(axis=0), v.max(axis=0)
+        return big.area_mm2 + sum(p.area_mm2 for p in ps if p is not big
+                                  and not np.all((p.center >= lo) & (p.center <= hi)))
+
+    areas = {n: g_area(ps) for n, ps in groups.items()}
+    num = max(areas, key=areas.get)
+    others = [a for n, a in areas.items() if n != num]
+    big = max(groups[num], key=lambda p: p.area_mm2)
+    if len(groups) >= 5:
+        ctr = np.mean([p.center for p in mine if p.number != num], axis=0)
+        span = np.ptp(np.vstack([p.center for p in mine]), axis=0).max()
+        if areas[num] > 2.5 * np.median(others) and \
+                np.hypot(*(big.center - ctr)) < 0.15 * max(span, 1e-6):
+            return groups[num], f"pad expuesto ({num})"
+    if areas[num] >= 0.6 * sum(areas.values()):
+        return groups[num], f"aleta (pad {num})"
     return None
 
 
@@ -139,9 +163,9 @@ def build_sources(board: Board, grid: Grid, csv_path: Optional[str] = None,
             if not s.pads:
                 log(f"  [aviso] {c.ref}: Thermal_Pads={wanted} no existe; uso todos los pads.")
         if not s.pads:
-            ep = _exposed_pad(c)
-            if ep is not None:
-                s.pads, s.pad_rule = [ep], f"pad expuesto ({ep.number})"
+            tg = _thermal_group(c)
+            if tg is not None:
+                s.pads, s.pad_rule = tg
             else:
                 s.pads, s.pad_rule = mine, "todos los pads"
         if not s.pads:
