@@ -1,0 +1,12 @@
+Component,Value,Power_W,T_pads_C,Theta_used,Theta_source,Tj_C,T_max_C,Margin_C,Status,T_amb_max_C,Tj_JEDEC_thetaJA_C,Heat_enters_through
+U1,AP64501SP-13,1.0,84.58,5.0,θJC como θJB,89.58,125.0,35.42,PASA,60.42,70.0,pad expuesto (9)
+C2,10µF,0.006,75.43,,,,125.0,49.57,PASA,74.57,,todos los pads
+L1,3.6µH,0.2,75.33,,,,125.0,49.67,PASA,74.67,,todos los pads
+C1,10µF,0.006,75.09,,,,125.0,49.91,PASA,74.91,,todos los pads
+L2,10µH,0.2,73.17,,,,125.0,51.83,PASA,76.83,,todos los pads
+C9,22µF,0.006,70.55,,,,125.0,54.45,PASA,79.45,,todos los pads
+C12,22µF,0.006,70.05,,,,125.0,54.95,PASA,79.95,,todos los pads
+C10,22µF,0.006,70.04,,,,125.0,54.96,PASA,79.96,,todos los pads
+C11,22µF,0.006,69.4,,,,125.0,55.6,PASA,80.6,,todos los pads
+
+VERDICT,"PASA — peor caso U1: Tj 90 °C, límite 125 °C (margen 35 °C; aguanta hasta ~60 °C de ambiente)"

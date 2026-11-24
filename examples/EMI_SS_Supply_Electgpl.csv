@@ -1,0 +1,10 @@
+Component,Power_W,T_max,Theta_JB,Theta_JC,Theta_JA,Thermal_Pads,Description
+U1,1.0,125,,5,45,,AP64501SP-13 (datasheet: Tj max 125 C / thetaJA 45 / thetaJC 5 C/W)
+L1,0.2,125,,,,,Vishay IHLP-4040 3.6uH (T_max: verificar en hoja de datos)
+L2,0.2,125,,,,,Wuerth HCM-7050 10uH (T_max: verificar en hoja de datos)
+C1,0.006,125,,,,,10uF 1206 X7R
+C2,0.006,125,,,,,10uF 1206 X7R
+C9,0.006,125,,,,,22uF 1210 (T_max: verificar dielectrico)
+C10,0.006,125,,,,,22uF 1210 (T_max: verificar dielectrico)
+C11,0.006,125,,,,,22uF 1210 (T_max: verificar dielectrico)
+C12,0.006,125,,,,,22uF 1210 (T_max: verificar dielectrico)
