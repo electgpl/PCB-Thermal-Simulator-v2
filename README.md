@@ -102,7 +102,8 @@ L1,0.2,125,,,,,IHLP-4040
 | `Thermal_Pads` | no | Pad numbers that carry the heat, e.g. `9` or `2 4` |
 
 Where the heat enters the board: the pads in `Thermal_Pads`; otherwise the
-exposed pad if the footprint has one; otherwise all pads, weighted by area.
+exposed pad or tab (TO-252, SOT-223…) if the footprint has one; otherwise all
+pads, weighted by area. Lines starting with `#` in the CSV are comments.
 
 ## Pass / fail
 
