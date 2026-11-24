@@ -1,0 +1,28 @@
+# ESP32_LoRa_Zero - potencias para la simulacion termica
+#
+# ESCENARIO (peor caso sostenido): alimentado por USB (5 V), WiFi con trafico
+# intenso y LoRa transmitiendo a +22 dBm en forma CONTINUA.
+# En uso real LoRa transmite por rafagas (ciclo de trabajo bajo), asi que esto
+# es pesimista: para un caso tipico multiplica U1, FL1 y U2 por tu ciclo de trabajo.
+#
+# Consumo supuesto en 3.3 V: ESP32-S3 ~250 mA + SX1262 118 mA + flash y otros ~20 mA = ~0.39 A
+#
+# Las potencias son ESTIMACIONES con valores tipicos de hoja de datos; revisa
+# sobre todo las marcadas (*). Los componentes que no figuran disipan
+# practicamente nada. No se cargo ninguna resistencia termica (theta): las hojas
+# de datos de estos integrados no la dan o no la verifique, asi que el limite se
+# compara contra la temperatura de los pads (la juntura esta algunos grados mas arriba).
+#
+Component,Power_W,T_max,Theta_JB,Theta_JC,Theta_JA,Thermal_Pads,Description
+# --- Radio y procesador ---
+U3,0.80,105,,,,,ESP32-S3: 3.3 V x ~250 mA promedio con WiFi activo (pico de TX 340 mA) menos la RF emitida (*). T_max 105 = limite de temperatura ambiente del chip (conservador)
+U1,0.23,105,,,,,SX1262 en TX +22 dBm continuo: 3.3 V x 118 mA = 0.39 W menos 0.16 W de RF que sale del chip. T_max conservador (*)
+FL1,0.02,105,,,,,Balun/filtro IPD: ~0.6 dB de perdida sobre 160 mW de RF (*)
+U2,0.01,105,,,,,Llave de antena BGS12: ~0.35 dB de perdida de insercion (*)
+U4,0.015,85,,,,,Flash GD25Q128: 3.3 V x ~5 mA promedio (*). T_max 85 (grado industrial)
+PFB1,0.01,125,,,,,Ferrite 330R en la alimentacion de RF del ESP32: ~0.2 A^2 x ~0.3 ohm DCR (*)
+# --- Alimentacion: USB 5 V -> LM66200 -> TPS631000 -> 3.3 V ---
+U6,0.11,125,,,,,TPS631000 buck-boost 5 V -> 3.3 V a 0.39 A: ~91 % de rendimiento => 0.13 W de perdida total menos la del inductor (*)
+L5,0.02,125,,,,,Inductor 1 uH 2520: 0.4 A^2 x ~50 mohm DCR + ripple (*)
+U5,0.005,125,,,,,LM66200 diodo ideal: 0.29 A^2 x ~40 mohm + consumo propio
+F1,0.01,85,,,,,PPTC nSMD150 1206: 0.29 A^2 x ~0.1 ohm (*). T_max 85: pierde corriente de retencion con la temperatura
